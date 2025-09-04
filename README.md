@@ -1,4 +1,4 @@
-# Automatizaci-n-torno
+# Automatizacion-torno
 Este código controla un torno automatizado mediante una placa Arduino, una pantalla LCD 16x2 y una shield de botones analógicos. Su objetivo principal es facilitar el proceso de corte de piezas cilíndricas, permitiendo al usuario seleccionar distintas configuraciones de corte a través de un menú interactivo.
 
 Este código está diseñado para controlar un **torno automatizado** utilizando un **Arduino** con una **pantalla LCD 16x2** y una **shield de botones analógicos**. Su objetivo principal es permitir al usuario seleccionar, desde un menú interactivo, distintos programas de corte para mecanizar piezas con precisión, eligiendo entre **longitudes de corte (4mm a 7mm)** y **direcciones de giro (derecha o izquierda)**.
