@@ -1,1 +1,753 @@
+String menuItems[9] = {"4mm derecha", "5mm derecha", "6mm derecha", "7mm derecha", "4mm Izquierda", "5mm Izquierda", "6mm Izquierda", "7mm Izquierda", "REPETICIONES"};
+ 
+// Variables de los botones de navegación
+int readKey;
+int savedDistance = 0;
+int cont = 0;
+ 
+// Menu de control de variables
+int menuPage = 0;
+int maxMenuPages = round(((sizeof(menuItems) / sizeof(String))/1.15 ) + .5);
+int cursorPosition = 0;
+ 
+// Crea 3 caracteres personalizados para el display
+byte downArrow[8] = {
+  0b00100, //   *
+  0b00100, //   *
+  0b00100, //   *
+  0b00100, //   *
+  0b00100, //   *
+  0b10101, // * * *
+  0b01110, //  ***
+  0b00100  //   *
+};
+ 
+byte upArrow[8] = {
+  0b00100, //   *
+  0b01110, //  ***
+  0b10101, // * * *
+  0b00100, //   *
+  0b00100, //   *
+  0b00100, //   *
+  0b00100, //   *
+  0b00100  //   *
+};
+ 
+byte menuCursor[8] = {
+  B01000, //  *
+  B00100, //   *
+  B00010, //    *
+  B00001, //     *
+  B00010, //    *
+  B00100, //   *
+  B01000, //  *
+  B00000  //
+};
+ 
+#include <Wire.h>
+#include <LiquidCrystal.h>
+ 
+// Configura los pines para la shield LCD
+LiquidCrystal lcd(8, 9, 4, 5, 6, 7); 
+ 
+void setup() {
+ 
+  // Inicia la comunicación serial
+  Serial.begin(9600);
+ 
+ 
+  // Inicia y limpia la pantalla LCD
+  lcd.begin(16, 2);
+  lcd.clear();
+  lcd.setCursor(0,0);   //Columna, fila
+ 
+  //Imprime un mensaje al iniciar el programa
+ 
+  lcd.print("PROYECTOS MOLDES");
+  lcd.setCursor(0,1);
+  lcd.print("    Y TORNO");
+  delay(1200);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("    PRO-MOLD");
+  lcd.setCursor(0,1);
+  lcd.print("       :D");
+  delay(1200);
+  lcd.clear();
+  lcd.setCursor(6,0);
+  lcd.print("HOLA!");
+  lcd.setCursor(3,1);
+  lcd.print("BIENVENIDO");
+  delay(1200);
+  lcd.clear();
+  lcd.setCursor(0,0); //Columna,fila
+  lcd.print("SELECCIONA LAS");
+  lcd.setCursor(0,1);
+  lcd.print("  OPCIONES");
+ 
+ 
+/*for(int c=0;c<7;c++){         //Realiza un scroll en la pantalla
+  lcd.scrollDisplayLeft();
+  delay(100);
+  }
+  for(int c=0; c<5;c++){
+  lcd.scrollDisplayRight();
+  delay(200);
+  }*/
+ 
+ 
+  delay(1200);
+  lcd.clear();
+ 
+  // Crea el byte para los 3 caracteres personalizados.
+  lcd.createChar(0, menuCursor);
+  lcd.createChar(1, upArrow);
+  lcd.createChar(2, downArrow);
 
+    pinMode(2, OUTPUT); //Dirección
+    pinMode(3, OUTPUT); //PULSO
+    pinMode(A4, OUTPUT); //Dirección
+    pinMode(A5, OUTPUT); //PULSO
+ 
+}
+ 
+ 
+void loop() {
+  mainMenuDraw();
+  drawCursor();
+  operateMainMenu();
+ 
+}
+ 
+// Esta función generará los 2 elementos del menú que pueden caber en la pantalla. Cambiarán a medida que se desplaza por su menú.
+//Las flechas hacia arriba y hacia abajo indicarán la posición actual del menú.
+ 
+void mainMenuDraw() {
+  Serial.print(menuPage);
+  lcd.clear();
+  lcd.setCursor(1, 0);
+  lcd.print(menuItems[menuPage]);
+  lcd.setCursor(1, 1);
+  lcd.print(menuItems[menuPage + 1]);
+  if (menuPage == 0) {
+    lcd.setCursor(15, 1);
+    lcd.write(byte(2));
+  } else if (menuPage > 0 and menuPage < maxMenuPages) {
+    lcd.setCursor(15, 1);
+    lcd.write(byte(2));
+    lcd.setCursor(15, 0);
+    lcd.write(byte(1));
+  } else if (menuPage == maxMenuPages) {
+    lcd.setCursor(15, 0);
+    lcd.write(byte(1));
+  }
+}
+ 
+// Cuando se llama, esta función borrará el cursor actual y lo redibujará en función de las variables cursorPosition y menuPage.
+void drawCursor() {
+  for (int x = 0; x < 2; x++) {     // Borra el cursor actual
+    lcd.setCursor(0, x);
+    lcd.print(" ");
+  }
+ 
+  // El menú está configurado para ser progresivo(menuPage 0 = Item 1 & Item 2, menuPage 1 = Item 2 & Item 3, menuPage 2 = Item 3 & Item 4), así
+  // para determinar dónde debe estar el cursor, debe ver si se encuentra en una página de menú impar o par y en una posición de cursor impar o par.
+  if (menuPage % 2 == 0) {
+    if (cursorPosition % 2 == 0) {  // Si la página del menú es par y la posición del cursor es par, eso significa que el cursor debe estar en la línea 1
+      lcd.setCursor(0, 0);
+      lcd.write(byte(0));
+    }
+    if (cursorPosition % 2 != 0) {  // Si la página del menú es par y la posición del cursor es impar, significa que el cursor debe estar en la línea 2
+      lcd.setCursor(0, 1);
+      lcd.write(byte(0));
+    }
+  }
+  if (menuPage % 2 != 0) {
+    if (cursorPosition % 2 == 0) {  // Si la página del menú es impar y la posición del cursor es par, eso significa que el cursor debe estar en la línea 2
+      lcd.setCursor(0, 1);
+      lcd.write(byte(0));
+    }
+    if (cursorPosition % 2 != 0) {  // Si la página del menú es impar y la posición del cursor es impar, eso significa que el cursor debe estar en la línea 1
+      lcd.setCursor(0, 0);
+      lcd.write(byte(0));
+    }
+  }
+}
+ 
+ 
+void operateMainMenu() {
+  int activeButton = 0;
+  while (activeButton == 0) {
+    int button;
+    readKey = analogRead(0);
+    if (readKey < 790) {
+      delay(100);
+      readKey = analogRead(0);
+    }
+    button = evaluateButton(readKey);
+    switch (button) {
+      case 0: // Cuando el botón devuelve un 0 no se toma ninguna acción
+        break;
+      case 1:  // Este caso se ejecuta si el botón "adelante" es presionado
+        button = 0;
+        switch (cursorPosition) { //El caso que se selecciona aquí depende de la página de menú en la que se encuentre y de dónde esté el cursor.
+          case 0:
+            menu4mmRIGHT();
+            break;
+          case 1:
+            menu5mmRIGHT();
+            break;
+          case 2:
+            menu6mmRIGHT();
+            break;
+          case 3:
+            menu7mmRIGHT();
+            break;
+            case 4:
+            menu4mmLEFT();
+            break;
+          case 5:
+            menu5mmLEFT();
+            break;
+          case 6:
+            menu6mmLEFT();
+            break;
+          case 7:
+            menu7mmLEFT();
+            break;
+            case 8:
+            menuREPET();      
+            break;
+ 
+        }
+        activeButton = 1;
+        mainMenuDraw();
+        drawCursor();
+        break;
+      case 2:
+        button = 0;
+        if (menuPage == 0) {
+          cursorPosition = cursorPosition - 1;
+          cursorPosition = constrain(cursorPosition, 0, ((sizeof(menuItems) / sizeof(String)) - 1));
+        }
+        if (menuPage % 2 == 0 and cursorPosition % 2 == 0) {
+          menuPage = menuPage - 1;
+          menuPage = constrain(menuPage, 0, maxMenuPages);
+        }
+ 
+        if (menuPage % 2 != 0 and cursorPosition % 2 != 0) {
+          menuPage = menuPage - 1;
+          menuPage = constrain(menuPage, 0, maxMenuPages);
+        }
+ 
+        cursorPosition = cursorPosition - 1;
+        cursorPosition = constrain(cursorPosition, 0, ((sizeof(menuItems) / sizeof(String)) - 1));
+ 
+        mainMenuDraw();
+        drawCursor();
+        activeButton = 1;
+        break;
+      case 3:
+        button = 0;
+        if (menuPage % 2 == 0 and cursorPosition % 2 != 0) {
+          menuPage = menuPage + 1;
+          menuPage = constrain(menuPage, 0, maxMenuPages);
+        }
+ 
+        if (menuPage % 2 != 0 and cursorPosition % 2 == 0) {
+          menuPage = menuPage + 1;
+          menuPage = constrain(menuPage, 0, maxMenuPages);
+        }
+ 
+        cursorPosition = cursorPosition + 1;
+        cursorPosition = constrain(cursorPosition, 0, ((sizeof(menuItems) / sizeof(String)) - 1));
+        mainMenuDraw();
+        drawCursor();
+        activeButton = 1;
+        break;
+    }
+  }
+}
+ 
+// Se llama a esta función cada vez que se evalúa presionar un botón.
+//La pantalla LCD funciona al observar una caída de voltaje en los botones, todos conectados a A0.
+ 
+/*
+ * VALORES  REPRESENTADOS PARA LAS TECLAS:
+       num |  Nombre | Tensión (V)| Digital
+      --------------------------------------
+       01  |  right  |  0,0000    |    0
+       02  |  up     |  0,7083    |  145
+       03  |  down   |  1,6102    |  330
+       04  |  left   |  2,4683    |  505
+       05  |  select |  3,6205    |  741
+      --------------------------------------
+ */
+ 
+int evaluateButton(int x) {
+  int result = 0;
+  if (x < 50) {
+    result = 1; // right (derecha)
+  } else if (x < 145) {
+    result = 2; // up (arriba)
+  } else if (x < 330) {
+    result = 3; // down (abajo)
+  } else if (x < 505) {
+    result = 4; // left (izquierda)
+  } else if (x < 741){
+    result = 5; //select (seleccionar)
+  }
+ 
+  return result;
+}
+ 
+void menu4mmRIGHT() { //4 milimetros
+  
+  int cont = 0;
+  int activeButton = 0;
+          lcd.clear();
+          lcd.setCursor(0,0); 
+          lcd.print(" Rotando...");
+          lcd.print(cont);
+//        lcd.setCursor(2,1); 
+      for(int f=0; f<=84; f++)//84 cortes
+      {
+        delay(800);
+         vueltacabezal4();
+         delay(800);
+         vueltamotorderecha();
+         cont++;
+         lcd.clear();
+         lcd.print(" CORTE No.: ");
+         lcd.print(cont);
+         lcd.setCursor(0,1);
+         lcd.print("   de 84");
+      }
+      delay(10);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("CORTES HECHOS: ");
+  lcd.print(cont);  
+  lcd.setCursor(0,1);
+  lcd.print("RST=SALIR");
+ 
+  while (activeButton == 0) {
+    int button;
+    readKey = analogRead(0);
+    if (readKey < 790) {
+      delay(100);
+      readKey = analogRead(0);
+      lcd.clear();
+  return menu4mmRIGHT();
+    }     
+ } 
+  }
+void menu5mmRIGHT() { //5 milimetros
+  int cont = 0;
+  int activeButton = 0;
+          lcd.clear();
+          lcd.setCursor(0,0); 
+          lcd.print(" Rotando...");
+          lcd.print(cont);
+//        lcd.setCursor(2,1); 
+      for(int f=0; f<=78; f++)//78 cortes
+      {
+        delay(800);
+         vueltacabezal5y6();
+         delay(800);
+         vueltamotorderecha();
+         cont++;
+         lcd.clear();
+         lcd.print(" CORTE No.: ");
+         lcd.print(cont);
+         lcd.setCursor(0,1);
+         lcd.print("   de 78");
+      }
+      delay(10);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("CORTES HECHOS: ");
+  lcd.print(cont);  
+  lcd.setCursor(0,1);
+  lcd.print("RST=SALIR");
+ 
+  while (activeButton == 0) {
+    int button;
+    readKey = analogRead(0);
+    if (readKey < 790) {
+      delay(100);
+      readKey = analogRead(0);
+      lcd.clear();
+  return menu5mmRIGHT();
+    }     
+ }
+}
+void menu6mmRIGHT() { // 6 milimetros
+  int cont = 0;
+  int activeButton = 0;
+          lcd.clear();
+          lcd.setCursor(0,0); 
+          lcd.print(" Rotando...");
+          lcd.print(cont);
+//        lcd.setCursor(2,1); 
+      for(int f=0; f<=78; f++)//78 cortes
+      {
+        delay(800);
+         vueltacabezal5y6();
+         delay(800);
+         vueltamotorderecha();
+         cont++;
+         lcd.clear();
+         lcd.print(" CORTE No.: ");
+         lcd.print(cont);
+         lcd.setCursor(0,1);
+         lcd.print("   de 78");
+      }
+      delay(10);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("CORTES HECHOS: ");
+  lcd.print(cont);  
+  lcd.setCursor(0,1);
+  lcd.print("RST=SALIR");
+ 
+  while (activeButton == 0) {
+    int button;
+    readKey = analogRead(0);
+    if (readKey < 790) {
+      delay(100);
+      readKey = analogRead(0);
+      lcd.clear();
+  return menu6mmRIGHT();
+    }     
+ }
+}
+
+void menu7mmRIGHT() { // 7 milimetros
+  int cont = 0;
+  int activeButton = 0;
+          lcd.clear();
+          lcd.setCursor(0,0); 
+          lcd.print(" Rotando...");
+          lcd.print(cont);
+//        lcd.setCursor(2,1); 
+      for(int f=0; f<=66; f++)//66 cortes
+      {
+        delay(800);
+         vueltacabezal7();
+         delay(800);
+         vueltamotorderecha();
+         cont++;
+         lcd.clear();
+         lcd.print(" CORTE No.: ");
+         lcd.print(cont);
+         lcd.setCursor(0,1);
+         lcd.print("   de 66");
+      }
+      delay(10);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("CORTES HECHOS: ");
+  lcd.print(cont);  
+  lcd.setCursor(0,1);
+  lcd.print("RST=SALIR");
+ 
+  while (activeButton == 0) {
+    int button;
+    readKey = analogRead(0);
+    if (readKey < 790) {
+      delay(100);
+      readKey = analogRead(0);
+      lcd.clear();
+  return menu7mmRIGHT();
+    }     
+ }
+}
+////////////////////////////////////////////PROGRAMACIÓN HACIA LA IZQUIERDA///////////////////////////
+void menu4mmLEFT() { //4 milimetros
+  
+  int cont = 0;
+  int activeButton = 0;
+          lcd.clear();
+          lcd.setCursor(0,0); 
+          lcd.print(" Rotando...");
+          lcd.print(cont);
+//        lcd.setCursor(2,1); 
+      for(int f=0; f<=84; f++)//84 cortes
+      {
+        delay(800);
+         vueltacabezal4();
+         delay(800);
+         vueltamotorizquierda();
+         cont++;
+         lcd.clear();
+         lcd.print(" CORTE No.: ");
+         lcd.print(cont);
+         lcd.setCursor(0,1);
+         lcd.print("   de 84");
+      }
+      delay(10);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("CORTES HECHOS: ");
+  lcd.print(cont);  
+  lcd.setCursor(0,1);
+  lcd.print("RST=SALIR");
+ 
+  while (activeButton == 0) {
+    int button;
+    readKey = analogRead(0);
+    if (readKey < 790) {
+      delay(100);
+      readKey = analogRead(0);
+      lcd.clear();
+  return menu4mmLEFT();
+    }     
+ } 
+  }
+ 
+  void menu5mmLEFT() { //5 milimetros
+  int cont = 0;
+  int activeButton = 0;
+          lcd.clear();
+          lcd.setCursor(0,0); 
+          lcd.print(" Rotando...");
+          lcd.print(cont);
+//        lcd.setCursor(2,1); 
+      for(int f=0; f<=78; f++)//78 cortes
+      {
+        delay(800);
+         vueltacabezal5y6();
+         delay(800);
+         vueltamotorizquierda();
+         cont++;
+         lcd.clear();
+         lcd.print(" CORTE No.: ");
+         lcd.print(cont);
+         lcd.setCursor(0,1);
+         lcd.print("   de 78");
+      }
+      delay(10);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("CORTES HECHOS: ");
+  lcd.print(cont);  
+  lcd.setCursor(0,1);
+  lcd.print("RST=SALIR");
+ 
+  while (activeButton == 0) {
+    int button;
+    readKey = analogRead(0);
+    if (readKey < 790) {
+      delay(100);
+      readKey = analogRead(0);
+      lcd.clear();
+  return menu5mmLEFT();
+    }     
+ }
+}
+void menu6mmLEFT() { // 6 milimetros
+  int cont = 0;
+  int activeButton = 0;
+          lcd.clear();
+          lcd.setCursor(0,0); 
+          lcd.print(" Rotando...");
+          lcd.print(cont);
+//        lcd.setCursor(2,1); 
+      for(int f=0; f<=78; f++)//78 cortes
+      {
+        delay(800);
+         vueltacabezal5y6();
+         delay(800);
+         vueltamotorizquierda();
+         cont++;
+         lcd.clear();
+         lcd.print(" CORTE No.: ");
+         lcd.print(cont);
+         lcd.setCursor(0,1);
+         lcd.print("   de 78");
+      }
+      delay(10);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("CORTES HECHOS: ");
+  lcd.print(cont);  
+  lcd.setCursor(0,1);
+  lcd.print("RST=SALIR");
+ 
+  while (activeButton == 0) {
+    int button;
+    readKey = analogRead(0);
+    if (readKey < 790) {
+      delay(100);
+      readKey = analogRead(0);
+      lcd.clear();
+  return menu6mmLEFT();
+    }     
+ }
+}
+void menu7mmLEFT() { // 7 milimetros
+  int cont = 0;
+  int activeButton = 0;
+          lcd.clear();
+          lcd.setCursor(0,0); 
+          lcd.print(" Rotando...");
+          lcd.print(cont);
+//        lcd.setCursor(2,1); 
+      for(int f=0; f<=66; f++)//66 cortes
+      {
+        delay(800);
+         vueltacabezal7();
+         delay(800);
+         vueltamotorizquierda();
+         cont++;
+         lcd.clear();
+         lcd.print(" CORTE No.: ");
+         lcd.print(cont);
+         lcd.setCursor(0,1);
+         lcd.print("   de 66");
+      }
+      delay(10);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("CORTES HECHOS: ");
+  lcd.print(cont);  
+  lcd.setCursor(0,1);
+  lcd.print("RST=SALIR");
+ 
+  while (activeButton == 0) {
+    int button;
+    readKey = analogRead(0);
+    if (readKey < 790) {
+      delay(100);
+      readKey = analogRead(0);
+      lcd.clear();
+  return menu7mmLEFT();
+    }     
+ }
+}
+  
+void menuREPET() { //PRUEBAAAS
+  int cont = 0;
+  int activeButton = 0;
+          lcd.clear();
+          lcd.setCursor(0,0); 
+          lcd.print(" Rotando...");
+          lcd.print(cont);
+//        lcd.setCursor(2,1); 
+      for(int f=0; f<=2; f++)
+      {
+         delay(800);
+         vueltacabezal7();
+         delay(800);
+         vueltamotorderecha();
+         cont++;
+         lcd.clear();
+         lcd.print(" CORTE No.: ");
+         lcd.print(cont);
+         lcd.setCursor(0,1);
+         lcd.print("   de 3");
+      }
+      delay(10);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("CORTES HECHOS: ");
+  lcd.print(cont);  
+  lcd.setCursor(0,1);
+  lcd.print("RST=SALIR");
+ 
+  while (activeButton == 0) {
+    int button;
+    readKey = analogRead(0);
+    if (readKey < 790) {
+      delay(100);
+      readKey = analogRead(0);
+      lcd.clear();
+  return menuREPET();
+    }     
+ }      
+}
+
+   void vueltamotorderecha(){
+     
+        //delay(1000);
+        digitalWrite(13,HIGH); 
+        digitalWrite(A4, LOW);
+        
+   for(int a=0; a<=6000; a++)//5 vueltas en manivela - 12.5 =  //1000 = 2.5 vueltas motor = 1 vuelta en manivela = 0.200 pulgadas//5 vueltas = 24mm 
+  {
+        digitalWrite (A5, HIGH);
+        delayMicroseconds(1500);//aumentando el numero aumenta el tiempo solo girando hacia lado derecho 
+        digitalWrite (A5, LOW);     
+  }
+        delay(3000);            //pausa que hace al terminar el ciclos
+        digitalWrite(A4, HIGH);
+    for(int b=0; b<=6000; b++)
+  {
+        digitalWrite (A5, HIGH);
+        delayMicroseconds(1500);//aumentando el numero aumenta el tiempo solo girando hacia lado izquierdo 
+        digitalWrite (A5, LOW);
+  }
+        delay(200);
+   }
+void vueltamotorizquierda(){
+     
+        digitalWrite(13,HIGH); 
+        digitalWrite(A4, HIGH);
+        
+   for(int a=0; a<=6000; a++)//5 vueltas en manivela - 12.5 =  //1000 = 2.5 vueltas motor = 1 vuelta en manivela = 0.200 pulgadas
+  {
+        digitalWrite (A5, HIGH);
+        delayMicroseconds(1500);
+        digitalWrite (A5, LOW);     
+  }
+        delay(3000);
+        digitalWrite(A4, LOW);
+    for(int b=0; b<=6000; b++)
+  {
+        digitalWrite (A5, HIGH);
+        delayMicroseconds(1500);
+        digitalWrite (A5, LOW);
+  }
+        delay(200);
+   }
+   void vueltacabezal4(){
+//       
+      digitalWrite(13,HIGH); 
+      digitalWrite(3, HIGH);
+
+  for(int c=0; c<761.95; c++)
+  {
+      digitalWrite (2, HIGH);
+      delayMicroseconds(900);
+      digitalWrite (2, LOW);
+  }
+      delay(100);
+   }
+   void vueltacabezal5y6(){
+//       
+      digitalWrite(13,HIGH); 
+      digitalWrite(3, HIGH);
+
+  for(int c=0; c<820.95; c++)
+  {
+      digitalWrite (2, HIGH);
+      delayMicroseconds(900);
+      digitalWrite (2, LOW);
+  }
+      delay(100);
+   }
+   
+   void vueltacabezal7(){
+//       
+      digitalWrite(13,HIGH); 
+      digitalWrite(3, HIGH);
+
+  for(int c=0; c<969.915; c++)
+  {
+      digitalWrite (2, HIGH);
+      delayMicroseconds(900);
+      digitalWrite (2, LOW);
+  }
+      delay(100);
+   }
